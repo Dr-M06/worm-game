@@ -307,12 +307,51 @@ body {
 
 /* Game Over Screen Enhancements */
 #gameOver {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: rgba(0, 0, 0, 0.9);
   padding: 30px;
   border-radius: 20px;
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.game-over-buttons {
+  display: none;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  gap: 10px;
+  z-index: 1000;
+}
+
+.game-over-buttons.visible {
+  display: flex;
+}
+
+.play-again-btn,
+.share-score-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 16px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+}
+
+.play-again-btn:hover,
+.share-score-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
 .final-score {
@@ -348,16 +387,17 @@ body {
 #game {
   position: relative;
   width: 90vw;
-  max-width: 300px;
+  max-width: 500px;
   height: 90vh;
-  max-height: 500px;
+  max-height: 800px;
   border: 2px solid #444;
   overflow: hidden;
   display: none;
   --bg-image: url('background.svg');
   border-radius: 15px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-  touch-action: none; /* Prevent default touch actions */
+  touch-action: none;
+  margin: 0 auto;
 }
 
 /* Background with blur */
@@ -439,41 +479,144 @@ body {
 }
 
 /* Fullscreen styles */
+.fullscreen-btn,
+.control-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  padding: 0;
+  margin: 0;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.fullscreen-btn:active,
+.control-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.3);
+}
+
 .fullscreen-btn {
   position: fixed;
   top: 10px;
   right: 10px;
-  background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(5px);
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  z-index: 1000;
 }
 
-/* Hide mobile controls on desktop */
-@media (min-width: 768px) {
-  .mobile-controls, .fullscreen-btn {
-    display: none;
-  }
+.control-btn {
+  margin-left: 10px;
 }
 
 /* Ensure game container fills screen in fullscreen mode */
 #game.fullscreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  max-width: none;
-  max-height: none;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
   z-index: 9999;
-  border-radius: 0;
+}
+
+/* Adjust header in fullscreen mode */
+#game.fullscreen #header {
+  padding: 15px 20px;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Adjust pause overlay */
+.paused::before {
+  content: 'PAUSED';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 32px;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px 40px;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+/* Ensure buttons are visible in fullscreen */
+#game.fullscreen .fullscreen-btn,
+#game.fullscreen .control-btn {
+  position: fixed;
+  z-index: 10000;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .fullscreen-btn,
+  .control-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 28px;
+  }
+
+  #game.fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+  }
+
+  .paused::before {
+    font-size: 28px;
+    padding: 15px 30px;
+  }
+
+  #game.fullscreen #header {
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  #game.fullscreen .control-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+  }
+
+  #game.fullscreen #score,
+  #game.fullscreen #lives,
+  #game.fullscreen #stage {
+    font-size: 18px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  #game {
+    max-width: 300px;
+    max-height: 500px;
+  }
+}
+
+/* Prevent text selection on buttons */
+.fullscreen-btn,
+.control-btn {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 /* Basket Animation */
@@ -542,82 +685,97 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
+  padding: 10px 20px;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(5px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+  gap: 10px;
 }
 
-/* Score Display */
-#score {
-  color: #fff;
-  font-size: 16px;
+#score, #lives, #stage {
+  flex: 1;
+  white-space: nowrap;
 }
 
-/* Lives Display */
-#lives {
-  color: #fff;
-  font-size: 16px;
-}
-
-/* Stage Display */
-#stage {
-  color: #fff;
-  font-size: 16px;
-}
-
-#gameOver button {
-  background: #00f;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-  border-radius: 5px;
-  margin-top: 10px;
-}
-
-#gameOver button:hover {
-  background: #0077cc;
-}
-
-/* Control Button */
+/* Control Button Styles */
 .control-btn {
-  background: none;
+  position: relative;
+  background: rgba(255, 255, 255, 0.2);
   border: none;
-  color: white;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-size: 20px;
+  padding: 0;
+  margin: 0;
+  color: white;
   cursor: pointer;
-  padding: 5px;
-  margin-left: 10px;
-  transition: transform 0.2s;
-  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+  z-index: 1001;
 }
 
-.control-btn:hover {
-  transform: scale(1.1);
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  #header {
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  #game.fullscreen #header {
+    padding: 15px 60px 15px 20px; /* Add right padding to avoid overlap with fullscreen button */
+  }
+
+  .control-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+  }
+
+  #score, #lives, #stage {
+    font-size: 16px;
+  }
+
+  .fullscreen-btn {
+    top: 15px;
+    right: 15px;
+  }
 }
 
-.control-btn:active {
-  transform: scale(0.95);
+/* Ensure buttons are visible in fullscreen */
+#game.fullscreen .fullscreen-btn {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 10000;
+}
+
+#game.fullscreen .control-btn {
+  z-index: 10000;
 }
 
 /* Pause Overlay */
 .paused::before {
   content: 'PAUSED';
-  position: absolute;
+  position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 32px;
   color: white;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-  z-index: 10;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px 40px;
+  border-radius: 10px;
   pointer-events: none;
-}
-
-.paused .fruit {
-  animation-play-state: paused;
 }
 
 /* Premium Powerup Animations */

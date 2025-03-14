@@ -29,7 +29,7 @@ let isSlowActive = false;
 let slowDuration = 5000;
 let isPaused = false;
 let basketY = window.innerHeight - 160; // Initial basket Y position
-const BASKET_SPEED = 5;
+const BASKET_SPEED = 20;
 const BASKET_VERTICAL_LIMIT = 100; // Minimum distance from top/bottom
 
 // Premium features state
@@ -64,6 +64,9 @@ let touchStartY = 0;
 let touchStartBasketX = 0;
 let touchStartBasketY = 0;
 const SWIPE_SENSITIVITY = 1.5; // Adjust this value to change swipe sensitivity
+
+// Initialize variables
+let gameStarted = false;
 
 // Save game data
 async function saveGameData() {
@@ -221,9 +224,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initializePWA();
   await loadGameData();
 
-  // Fullscreen button
+  // Initialize pause button
+  const pauseBtn = document.getElementById('pauseBtn');
+  pauseBtn.textContent = ICONS.PAUSE;
+
+  // Add touch event listeners for pause button
+  pauseBtn.addEventListener('touchstart', handlePauseTouch, { passive: false });
+  pauseBtn.addEventListener('click', handlePauseClick);
+
+  // Initialize fullscreen button
   const fullscreenBtn = document.getElementById('fullscreenBtn');
-  fullscreenBtn.addEventListener('click', toggleFullscreen);
+  fullscreenBtn.addEventListener('touchstart', handleFullscreenTouch, { passive: false });
+  fullscreenBtn.addEventListener('click', handleFullscreenClick);
 
   // Mobile control buttons
   const controls = {
@@ -307,17 +319,16 @@ game.addEventListener('touchmove', (e) => {
   const deltaX = touchX - touchStartX;
   const deltaY = touchY - touchStartY;
   const gameRect = game.getBoundingClientRect();
-  const basketRect = basket.getBoundingClientRect();
 
   // Horizontal movement
   const newBasketX = touchStartBasketX + (deltaX / gameRect.width) * 100 * SWIPE_SENSITIVITY;
-  basketX = Math.max(0, Math.min(100 - (basketRect.width / gameRect.width) * 100, newBasketX));
+  basketX = Math.max(0, Math.min(100, newBasketX));
 
   // Vertical movement
-  const newBasketY = touchStartBasketY - (deltaY / gameRect.height) * 100 * SWIPE_SENSITIVITY;
+  const newBasketY = touchStartBasketY + (deltaY * SWIPE_SENSITIVITY);
   basketY = Math.max(
     BASKET_VERTICAL_LIMIT,
-    Math.min(gameRect.height - basketRect.height - 20, newBasketY)
+    Math.min(gameRect.height - 100, newBasketY)
   );
 
   updateBasketPosition();
@@ -327,19 +338,18 @@ game.addEventListener('touchmove', (e) => {
 document.addEventListener('keydown', (e) => {
   if (isGameOver || !gameStarted || isPaused) return;
 
-  const MOVE_SPEED = 20;
   switch (e.key) {
     case 'ArrowLeft':
-      basketX = Math.max(0, basketX - MOVE_SPEED);
+      basketX = Math.max(0, basketX - BASKET_SPEED);
       break;
     case 'ArrowRight':
-      basketX = Math.min(100, basketX + MOVE_SPEED);
+      basketX = Math.min(100, basketX + BASKET_SPEED);
       break;
     case 'ArrowUp':
-      basketY = Math.max(BASKET_VERTICAL_LIMIT, basketY - MOVE_SPEED);
+      basketY = Math.max(BASKET_VERTICAL_LIMIT, basketY - BASKET_SPEED);
       break;
     case 'ArrowDown':
-      basketY = Math.min(window.innerHeight - 80, basketY + MOVE_SPEED);
+      basketY = Math.min(window.innerHeight - 100, basketY + BASKET_SPEED);
       break;
     case 'p':
     case 'P':
@@ -353,11 +363,16 @@ document.addEventListener('keydown', (e) => {
 // Helper function to update basket position
 function updateBasketPosition() {
   const gameRect = game.getBoundingClientRect();
-  const basketRect = basket.getBoundingClientRect();
   
-  // Update basket position
+  // Update horizontal position
   basket.style.left = `${basketX}%`;
-  basket.style.bottom = `${window.innerHeight - basketY - basketRect.height}px`;
+  
+  // Update vertical position
+  const maxY = gameRect.height - 100; // Leave some space from bottom
+  const minY = BASKET_VERTICAL_LIMIT; // Minimum distance from top
+  const clampedY = Math.max(minY, Math.min(maxY, basketY));
+  
+  basket.style.bottom = `${gameRect.height - clampedY}px`;
 }
 
 // Create falling fruits
@@ -483,7 +498,15 @@ function endGame() {
   isGameOver = true;
   clearInterval(gameInterval);
   clearInterval(fruitInterval);
+  
+  // Show game over screen
   gameOverScreen.style.display = 'block';
+  
+  // Show game over buttons
+  const gameOverButtons = document.querySelector('.game-over-buttons');
+  if (gameOverButtons) {
+    gameOverButtons.classList.add('visible');
+  }
   
   const finalScore = gameOverScreen.querySelector('.final-score');
   const highScore = gameOverScreen.querySelector('.high-score');
@@ -513,14 +536,30 @@ function resetGame() {
   lives = 4;
   fruitSpeed = 5;
   spawnRate = 1000;
+  
+  // Hide game over screen and buttons
+  gameOverScreen.style.display = 'none';
+  const gameOverButtons = document.querySelector('.game-over-buttons');
+  if (gameOverButtons) {
+    gameOverButtons.classList.remove('visible');
+  }
+  
+  // Reset displays
   scoreDisplay.textContent = `Score: ${score}`;
   stageDisplay.textContent = `Stage: ${stage}`;
   livesDisplay.textContent = `Lives: ${lives}`;
-  gameOverScreen.style.display = 'none';
+  
+  // Clear fruits and reset game state
   document.querySelectorAll('.fruit').forEach(fruit => fruit.remove());
   pauseBtn.textContent = ICONS.PAUSE;
   game.classList.remove('paused');
-  bgMusic.play();
+  
+  // Start background music
+  if (soundToggle.checked) {
+    bgMusic.currentTime = 0;
+    bgMusic.play();
+  }
+  
   startGame();
 }
 
@@ -528,7 +567,15 @@ function resetGame() {
 function startGame() {
   startScreen.style.display = 'none';
   game.style.display = 'block';
+  gameStarted = true;
   document.documentElement.style.setProperty('--bg-image', `url('${backgroundSelect.value}')`);
+  
+  // Reset game state
+  isPaused = false;
+  pauseBtn.textContent = ICONS.PAUSE;
+  game.classList.remove('paused');
+  
+  // Initialize sounds
   catchSound.muted = !soundToggle.checked;
   missSound.muted = !soundToggle.checked;
   boostSound.muted = !soundToggle.checked;
@@ -536,10 +583,12 @@ function startGame() {
   slowSound.muted = !soundToggle.checked;
   heartSound.muted = !soundToggle.checked;
   bgMusic.muted = !soundToggle.checked;
-  bgMusic.play();
-  isPaused = false;
-  pauseBtn.textContent = ICONS.PAUSE;
-  game.classList.remove('paused');
+  
+  if (soundToggle.checked) {
+    bgMusic.play();
+  }
+  
+  // Start game loop
   gameInterval = setInterval(createFruit, spawnRate);
 }
 
@@ -552,21 +601,81 @@ function triggerBasketWobble() {
 
 // Pause/Resume game
 function togglePause() {
+  if (!gameStarted || isGameOver) return;
+  
   isPaused = !isPaused;
-  pauseBtn.textContent = isPaused ? ICONS.PLAY : ICONS.PAUSE;
-  game.classList.toggle('paused');
+  const pauseBtn = document.getElementById('pauseBtn');
   
   if (isPaused) {
+    pauseBtn.textContent = ICONS.PLAY;
+    game.classList.add('paused');
     clearInterval(gameInterval);
+    if (fruitInterval) clearInterval(fruitInterval);
     bgMusic.pause();
+    
+    // Pause all fruit animations
+    document.querySelectorAll('.fruit').forEach(fruit => {
+      fruit.style.animationPlayState = 'paused';
+    });
   } else {
+    pauseBtn.textContent = ICONS.PAUSE;
+    game.classList.remove('paused');
     gameInterval = setInterval(createFruit, spawnRate);
-    if (!isGameOver) bgMusic.play();
+    if (soundToggle.checked) {
+      bgMusic.play();
+    }
+    
+    // Resume all fruit animations
+    document.querySelectorAll('.fruit').forEach(fruit => {
+      fruit.style.animationPlayState = 'running';
+    });
   }
 }
 
-// Add pause button event listener
-pauseBtn.addEventListener('click', togglePause);
+// Handle pause button touch
+function handlePauseTouch(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  togglePause();
+}
+
+// Handle pause button click
+function handlePauseClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  togglePause();
+}
+
+// Handle fullscreen button touch
+function handleFullscreenTouch(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleFullscreen();
+}
+
+// Handle fullscreen button click
+function handleFullscreenClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleFullscreen();
+}
+
+// Add event listeners for fullscreen changes
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+function handleFullscreenChange() {
+  const gameContainer = document.getElementById('game');
+  if (!document.fullscreenElement && 
+      !document.webkitFullscreenElement && 
+      !document.msFullscreenElement) {
+    gameContainer.classList.remove('fullscreen');
+  } else {
+    gameContainer.classList.add('fullscreen');
+  }
+}
 
 // Premium feature handling
 function showPremiumModal(feature) {
@@ -767,26 +876,46 @@ function shareScore() {
   }
 }
 
-// Add these functions for fullscreen handling
+// Update fullscreen handling
 function toggleFullscreen() {
-  const game = document.getElementById('game');
-  if (!document.fullscreenElement) {
-    if (game.requestFullscreen) {
-      game.requestFullscreen();
-    } else if (game.webkitRequestFullscreen) {
-      game.webkitRequestFullscreen();
-    } else if (game.msRequestFullscreen) {
-      game.msRequestFullscreen();
+  const gameContainer = document.getElementById('game');
+  
+  if (!document.fullscreenElement && 
+      !document.webkitFullscreenElement && 
+      !document.msFullscreenElement) {
+    
+    // Try all possible methods
+    if (gameContainer.requestFullscreen) {
+      gameContainer.requestFullscreen();
+    } else if (gameContainer.webkitRequestFullscreen) { // Safari
+      gameContainer.webkitRequestFullscreen();
+    } else if (gameContainer.msRequestFullscreen) { // IE11
+      gameContainer.msRequestFullscreen();
+    } else if (gameContainer.mozRequestFullScreen) { // Firefox
+      gameContainer.mozRequestFullScreen();
     }
-    game.classList.add('fullscreen');
+    
+    // Add fullscreen class
+    gameContainer.classList.add('fullscreen');
+    // Change orientation to landscape if possible
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {
+        // Silently fail if orientation lock is not supported
+      });
+    }
   } else {
+    // Exit fullscreen
     if (document.exitFullscreen) {
       document.exitFullscreen();
     } else if (document.webkitExitFullscreen) {
       document.webkitExitFullscreen();
     } else if (document.msExitFullscreen) {
       document.msExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
     }
-    game.classList.remove('fullscreen');
+    
+    // Remove fullscreen class
+    gameContainer.classList.remove('fullscreen');
   }
 } 
