@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FFD700">
+  <meta name="description" content="Catch fruits and avoid worms in this exciting arcade game!">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Fruit Catcher Pro</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Loading Indicator -->
+  <div class="loading-indicator">
+    <div class="loading-spinner"></div>
+    <p>Loading game assets...</p>
+  </div>
+
+  <!-- Offline Indicator -->
+  <div class="offline-indicator">
+    You are currently offline. Game progress will be saved locally.
+  </div>
+
+  <!-- Start Screen -->
+  <div id="startScreen">
+    <h1>🎮 Fruit Catcher Pro 🎮</h1>
+    <div class="version-badge">PRO VERSION</div>
+    <p>Welcome to the ultimate fruit catching experience! Catch fruits, avoid worms, and unlock amazing power-ups!</p>
+    
+    <div class="settings-container">
+      <label class="setting-item">
+        <span>🔊 Sound Effects</span>
+        <input type="checkbox" id="soundToggle" checked>
+      </label>
+      
+      <label class="setting-item">
+        <span>🎨 Theme</span>
+        <select id="backgroundSelect">
+          <option value="background.svg">Cottagecore Aesthetic</option>
+        </select>
+      </label>
+
+      <div class="premium-features">
+        <h3>🌟 Premium Features</h3>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span>👑 Exclusive Themes</span>
+            <button class="unlock-btn" onclick="showPremiumModal('themes')">Unlock</button>
+          </div>
+          <div class="feature-item">
+            <span>⚡ Power-up Boosts</span>
+            <button class="unlock-btn" onclick="showPremiumModal('powerups')">Unlock</button>
+          </div>
+          <div class="feature-item">
+            <span>💎 Special Characters</span>
+            <button class="unlock-btn" onclick="showPremiumModal('characters')">Unlock</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" onclick="startGame()">Start Game</button>
+    <div class="premium-badge">
+      <button onclick="showPremiumModal('all')" class="premium-btn">🌟 Upgrade to Pro</button>
+    </div>
+  </div>
+
+  <!-- Premium Features Modal -->
+  <div id="premiumModal" class="modal">
+    <div class="modal-content">
+      <h2>🌟 Upgrade to Pro</h2>
+      <div class="premium-benefits">
+        <h3>Unlock Amazing Features:</h3>
+        <ul>
+          <li>🎨 10+ Exclusive Themes</li>
+          <li>⚡ Enhanced Power-ups</li>
+          <li>💎 Special Characters</li>
+          <li>🏆 Global Leaderboard</li>
+          <li>📊 Detailed Statistics</li>
+          <li>🎵 Premium Music Tracks</li>
+          <li>🎮 Advanced Game Modes</li>
+        </ul>
+        <div class="price-tag">
+          <span class="original-price">$9.99</span>
+          <span class="special-price">$4.99</span>
+          <span class="discount-badge">50% OFF</span>
+        </div>
+        <button class="purchase-btn" onclick="handlePurchase()">Upgrade Now</button>
+      </div>
+      <button class="close-btn" onclick="closePremiumModal()">✕</button>
+    </div>
+  </div>
+
+  <!-- Game Container -->
+  <div id="game">
+    <div id="gameContent">
+      <div id="header">
+        <div id="score">Score: 0</div>
+        <div id="lives">Lives: 4</div>
+        <div id="stage">Stage: 1</div>
+        <button id="pauseBtn" class="control-btn">⏸️</button>
+      </div>
+      <div id="ground"></div>
+      <div id="basket">🧺</div>
+      <div id="gameOver">
+        Game Over!<br>
+        <div class="final-score"></div>
+        <div class="high-score"></div>
+        <button onclick="resetGame()">Play Again</button>
+        <button class="share-btn" onclick="shareScore()">Share Score</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sound Effects -->
+  <audio id="catchSound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3"></audio>
+  <audio id="missSound" src="https://www.soundjay.com/misc/sounds/fail-trombone-01.mp3"></audio>
+  <audio id="boostSound" src="https://www.soundjay.com/misc/sounds/magic-chime-02.mp3"></audio>
+  <audio id="wormSound" src="https://www.soundjay.com/misc/sounds/wrong-buzzer-01.mp3"></audio>
+  <audio id="slowSound" src="https://www.soundjay.com/misc/sounds/fairy-dust-01.mp3"></audio>
+  <audio id="heartSound" src="https://www.soundjay.com/misc/sounds/magic-chime-02.mp3"></audio>
+  <audio id="bgMusic" loop>
+    <source src="https://www.bensound.com/bensound-music/bensound-relaxing.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+  <!-- Offline Assets -->
+  <div style="display: none">
+    <!-- Preload images for offline use -->
+    <img src="background.svg" alt="">
+    <img src="icons/icon-72x72.png" alt="">
+    <img src="icons/icon-96x96.png" alt="">
+    <img src="icons/icon-128x128.png" alt="">
+    <img src="icons/icon-144x144.png" alt="">
+    <img src="icons/icon-152x152.png" alt="">
+    <img src="icons/icon-192x192.png" alt="">
+    <img src="icons/icon-384x384.png" alt="">
+    <img src="icons/icon-512x512.png" alt="">
+  </div>
+
+  <script>
+    // Check if browser is online
+    function updateOnlineStatus() {
+      const offlineIndicator = document.querySelector('.offline-indicator');
+      if (navigator.onLine) {
+        document.body.classList.remove('offline-mode');
+        offlineIndicator.style.display = 'none';
+      } else {
+        document.body.classList.add('offline-mode');
+        offlineIndicator.style.display = 'block';
+      }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+  </script>
+  <script src="game.js"></script>
+</body>
+</html>
