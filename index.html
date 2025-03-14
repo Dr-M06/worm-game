@@ -99,6 +99,7 @@
   <!-- Game Container -->
   <div id="game">
     <button class="fullscreen-btn" id="fullscreenBtn">📱</button>
+    <button class="menu-btn" id="menuBtn">☰</button>
     <div id="gameContent">
       <div id="header">
         <div id="score">Score: 0</div>
@@ -108,7 +109,7 @@
       </div>
       <div id="ground"></div>
       <div id="basket">
-        <img src="logo.png" alt="Basket" class="basket-image">
+        <span class="basket-image">🧺</span>
       </div>
       <div id="gameOver">
         Game Over!<br>
@@ -144,6 +145,13 @@
     <img src="icons/icon-192x192.png" alt="">
     <img src="icons/icon-384x384.png" alt="">
     <img src="icons/icon-512x512.png" alt="">
+  </div>
+
+  <div class="menu-panel" id="menuPanel">
+    <button id="addToHomeBtn" class="menu-item">📱 Add to Home Screen</button>
+    <button id="toggleSoundBtn" class="menu-item">🔊 Sound</button>
+    <button id="toggleThemeBtn" class="menu-item">🎨 Theme</button>
+    <button id="helpBtn" class="menu-item">❓ Help</button>
   </div>
 
   <script>
