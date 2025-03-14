@@ -28,6 +28,9 @@ let spawnRate = 1000;
 let isSlowActive = false;
 let slowDuration = 5000;
 let isPaused = false;
+let basketY = window.innerHeight - 160; // Initial basket Y position
+const BASKET_SPEED = 5;
+const BASKET_VERTICAL_LIMIT = 100; // Minimum distance from top/bottom
 
 // Premium features state
 let isPremium = false;
@@ -54,6 +57,13 @@ const ICONS = {
   PAUSE: '⏸️',
   PLAY: '▶️'
 };
+
+// Add these variables at the top with other declarations
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartBasketX = 0;
+let touchStartBasketY = 0;
+const SWIPE_SENSITIVITY = 1.5; // Adjust this value to change swipe sensitivity
 
 // Save game data
 async function saveGameData() {
@@ -210,6 +220,55 @@ window.addEventListener('beforeinstallprompt', (e) => {
 document.addEventListener('DOMContentLoaded', async () => {
   await initializePWA();
   await loadGameData();
+
+  // Fullscreen button
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+  fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+  // Mobile control buttons
+  const controls = {
+    up: document.querySelector('.up-btn'),
+    down: document.querySelector('.down-btn'),
+    left: document.querySelector('.left-btn'),
+    right: document.querySelector('.right-btn')
+  };
+
+  // Touch events for mobile controls
+  Object.entries(controls).forEach(([direction, button]) => {
+    let intervalId = null;
+    
+    button.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      intervalId = setInterval(() => moveBasket(direction), 16);
+    });
+
+    button.addEventListener('touchend', () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    });
+  });
+
+  // Keyboard controls (updated to include vertical movement)
+  document.addEventListener('keydown', function(e) {
+    if (gameStarted && !isPaused) {
+      switch(e.key) {
+        case 'ArrowLeft':
+          moveBasket('left');
+          break;
+        case 'ArrowRight':
+          moveBasket('right');
+          break;
+        case 'ArrowUp':
+          moveBasket('up');
+          break;
+        case 'ArrowDown':
+          moveBasket('down');
+          break;
+      }
+    }
+  });
 });
 
 // Move basket with arrow keys (for computers)
@@ -226,21 +285,80 @@ document.addEventListener('keydown', (e) => {
   basket.style.left = `${basketX}%`;
 });
 
-// Move basket based on touch position (for mobile)
-function moveBasket(event) {
-  if (isGameOver) return;
+// Remove old touch event listener and add new swipe controls
+game.removeEventListener('touchmove', moveBasket);
 
-  const touchX = event.touches[0].clientX;
+// Touch controls for mobile (swipe)
+game.addEventListener('touchstart', (e) => {
+  if (isGameOver || !gameStarted) return;
+  
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartBasketX = basketX;
+  touchStartBasketY = basketY;
+});
+
+game.addEventListener('touchmove', (e) => {
+  if (isGameOver || !gameStarted || isPaused) return;
+  e.preventDefault();
+
+  const touchX = e.touches[0].clientX;
+  const touchY = e.touches[0].clientY;
+  const deltaX = touchX - touchStartX;
+  const deltaY = touchY - touchStartY;
   const gameRect = game.getBoundingClientRect();
-  const newBasketX = ((touchX - gameRect.left) / gameRect.width) * 100;
+  const basketRect = basket.getBoundingClientRect();
 
-  if (newBasketX > 10 && newBasketX < 90) {
-    basketX = newBasketX;
-    basket.style.left = `${basketX}%`;
+  // Horizontal movement
+  const newBasketX = touchStartBasketX + (deltaX / gameRect.width) * 100 * SWIPE_SENSITIVITY;
+  basketX = Math.max(0, Math.min(100 - (basketRect.width / gameRect.width) * 100, newBasketX));
+
+  // Vertical movement
+  const newBasketY = touchStartBasketY - (deltaY / gameRect.height) * 100 * SWIPE_SENSITIVITY;
+  basketY = Math.max(
+    BASKET_VERTICAL_LIMIT,
+    Math.min(gameRect.height - basketRect.height - 20, newBasketY)
+  );
+
+  updateBasketPosition();
+});
+
+// Update keyboard controls
+document.addEventListener('keydown', (e) => {
+  if (isGameOver || !gameStarted || isPaused) return;
+
+  const MOVE_SPEED = 20;
+  switch (e.key) {
+    case 'ArrowLeft':
+      basketX = Math.max(0, basketX - MOVE_SPEED);
+      break;
+    case 'ArrowRight':
+      basketX = Math.min(100, basketX + MOVE_SPEED);
+      break;
+    case 'ArrowUp':
+      basketY = Math.max(BASKET_VERTICAL_LIMIT, basketY - MOVE_SPEED);
+      break;
+    case 'ArrowDown':
+      basketY = Math.min(window.innerHeight - 80, basketY + MOVE_SPEED);
+      break;
+    case 'p':
+    case 'P':
+    case 'Escape':
+      togglePause();
+      break;
   }
-}
+  updateBasketPosition();
+});
 
-game.addEventListener('touchmove', moveBasket);
+// Helper function to update basket position
+function updateBasketPosition() {
+  const gameRect = game.getBoundingClientRect();
+  const basketRect = basket.getBoundingClientRect();
+  
+  // Update basket position
+  basket.style.left = `${basketX}%`;
+  basket.style.bottom = `${window.innerHeight - basketY - basketRect.height}px`;
+}
 
 // Create falling fruits
 function createFruit() {
@@ -646,5 +764,29 @@ function shareScore() {
     document.execCommand('copy');
     document.body.removeChild(dummy);
     alert('Score copied to clipboard! Share it with your friends! 🎮');
+  }
+}
+
+// Add these functions for fullscreen handling
+function toggleFullscreen() {
+  const game = document.getElementById('game');
+  if (!document.fullscreenElement) {
+    if (game.requestFullscreen) {
+      game.requestFullscreen();
+    } else if (game.webkitRequestFullscreen) {
+      game.webkitRequestFullscreen();
+    } else if (game.msRequestFullscreen) {
+      game.msRequestFullscreen();
+    }
+    game.classList.add('fullscreen');
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+    game.classList.remove('fullscreen');
   }
 } 
