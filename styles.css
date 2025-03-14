@@ -456,16 +456,14 @@ body {
   bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 48px;
-  cursor: pointer;
   width: 100px;
-  height: 60px;
+  height: auto;
   display: flex;
   justify-content: center;
   align-items: center;
   user-select: none;
   transition: transform 0.2s ease;
-  touch-action: none; /* Prevent default touch actions */
+  touch-action: none;
 }
 
 /* Remove all mobile control button styles */
@@ -1008,4 +1006,50 @@ body {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Game Logo */
+.game-logo {
+  width: 150px;
+  height: auto;
+  margin: 0 auto 20px;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+}
+
+/* Basket Image */
+.basket-image {
+  width: 100px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease;
+}
+
+/* Wobble animation for basket */
+@keyframes wobble {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(-5deg); }
+  50% { transform: translateX(-50%) rotate(0deg); }
+  75% { transform: translateX(-50%) rotate(5deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+
+.wobble .basket-image {
+  animation: wobble 0.5s ease-in-out;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  .game-logo {
+    width: 120px;
+  }
+  
+  .basket-image {
+    width: 80px;
+  }
+  
+  #basket {
+    width: 80px;
+  }
 } 
