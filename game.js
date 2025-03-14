@@ -68,6 +68,9 @@ const SWIPE_SENSITIVITY = 1.5; // Adjust this value to change swipe sensitivity
 // Initialize variables
 let gameStarted = false;
 
+// Add deferredPrompt variable
+let deferredPrompt = null;
+
 // Save game data
 async function saveGameData() {
   const gameData = {
@@ -196,27 +199,43 @@ async function initializePWA() {
   }
 }
 
-// Add to home screen prompt
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  
-  // Show "Add to Home Screen" button
-  const installButton = document.createElement('button');
-  installButton.textContent = '📱 Add to Home Screen';
-  installButton.classList.add('install-button');
-  installButton.addEventListener('click', async () => {
+// Add to home screen functionality
+function addToHomeScreen() {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response to install prompt: ${outcome}`);
-      deferredPrompt = null;
-      installButton.style.display = 'none';
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            } else {
+                console.log('User dismissed the install prompt');
+            }
+            deferredPrompt = null;
+        });
+    } else {
+        alert('Installation is not available. The app might already be installed or your browser does not support this feature.');
     }
-  });
-  
-  document.querySelector('.premium-badge').appendChild(installButton);
+}
+
+// Update the install button visibility when the install prompt is available
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Show the install button in the menu
+    const addToHomeBtn = document.getElementById('addToHomeBtn');
+    if (addToHomeBtn) {
+        addToHomeBtn.style.display = 'block';
+        addToHomeBtn.style.opacity = '1';
+    }
+});
+
+// Hide the install button if the app is installed
+window.addEventListener('appinstalled', () => {
+    const addToHomeBtn = document.getElementById('addToHomeBtn');
+    if (addToHomeBtn) {
+        addToHomeBtn.style.display = 'none';
+    }
+    deferredPrompt = null;
 });
 
 // Initialize the game
@@ -918,4 +937,47 @@ function toggleFullscreen() {
     // Remove fullscreen class
     gameContainer.classList.remove('fullscreen');
   }
-} 
+}
+
+// Menu functionality
+const menuBtn = document.getElementById('menuBtn');
+const menuPanel = document.getElementById('menuPanel');
+let isMenuOpen = false;
+
+menuBtn.addEventListener('click', () => {
+    isMenuOpen = !isMenuOpen;
+    menuPanel.classList.toggle('visible', isMenuOpen);
+});
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (isMenuOpen && !menuBtn.contains(e.target) && !menuPanel.contains(e.target)) {
+        isMenuOpen = false;
+        menuPanel.classList.remove('visible');
+    }
+});
+
+// Handle menu button clicks
+document.getElementById('toggleSoundBtn').addEventListener('click', () => {
+    toggleSound();
+    menuPanel.classList.remove('visible');
+    isMenuOpen = false;
+});
+
+document.getElementById('toggleThemeBtn').addEventListener('click', () => {
+    toggleTheme();
+    menuPanel.classList.remove('visible');
+    isMenuOpen = false;
+});
+
+document.getElementById('helpBtn').addEventListener('click', () => {
+    showHelp();
+    menuPanel.classList.remove('visible');
+    isMenuOpen = false;
+});
+
+document.getElementById('addToHomeBtn').addEventListener('click', () => {
+    addToHomeScreen();
+    menuPanel.classList.remove('visible');
+    isMenuOpen = false;
+});
