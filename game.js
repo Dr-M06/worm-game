@@ -16,7 +16,7 @@ const heartSound = document.getElementById('heartSound');
 const bgMusic = document.getElementById('bgMusic');
 const pauseBtn = document.getElementById('pauseBtn');
 
-let basketX = window.innerWidth / 2;
+let basketX = 50;
 let score = 0;
 let lives = 4;
 let stage = 1;
@@ -28,10 +28,9 @@ let spawnRate = 1000;
 let isSlowActive = false;
 let slowDuration = 5000;
 let isPaused = false;
-let basketY = window.innerHeight - 120; // Initial basket Y position
+let basketY = window.innerHeight - 160; // Initial basket Y position
 const BASKET_SPEED = 20;
 const BASKET_VERTICAL_LIMIT = 100; // Minimum distance from top/bottom
-const SWIPE_SENSITIVITY = 1.0; // Reduced sensitivity for better mobile control
 
 // Premium features state
 let isPremium = false;
@@ -59,14 +58,12 @@ const ICONS = {
   PLAY: '▶️'
 };
 
-// Touch handling variables
-let touchStartX = null;
-let touchStartY = null;
-let touchStartBasketX = null;
-let touchStartBasketY = null;
-let lastTouchX = null;
-let lastTouchY = null;
-let isTouch = false;
+// Add these variables at the top with other declarations
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartBasketX = 0;
+let touchStartBasketY = 0;
+const SWIPE_SENSITIVITY = 1.5; // Adjust this value to change swipe sensitivity
 
 // Initialize variables
 let gameStarted = false;
@@ -246,38 +243,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initializePWA();
   await loadGameData();
 
-  // Set initial basket position
-  updateBasketPosition();
-
   // Initialize pause button
   const pauseBtn = document.getElementById('pauseBtn');
   pauseBtn.textContent = ICONS.PAUSE;
 
-  // Add touch event listeners for the game container
-  game.addEventListener('touchstart', handleTouchStart, { passive: false });
-  game.addEventListener('touchmove', handleTouchMove, { passive: false });
-  game.addEventListener('touchend', handleTouchEnd, { passive: false });
+  // Add touch event listeners for pause button
+  pauseBtn.addEventListener('touchstart', handlePauseTouch, { passive: false });
+  pauseBtn.addEventListener('click', handlePauseClick);
 
-  // Add fullscreen button event listeners
+  // Initialize fullscreen button
   const fullscreenBtn = document.getElementById('fullscreenBtn');
-  fullscreenBtn.addEventListener('click', toggleFullscreen);
-  fullscreenBtn.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    toggleFullscreen();
-  });
-
-  // Add pause button event listeners
-  pauseBtn.addEventListener('click', togglePause);
-  pauseBtn.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    togglePause();
-  });
-
-  // Handle window resize
-  window.addEventListener('resize', handleResize);
-  
-  // Handle device orientation change
-  window.addEventListener('orientationchange', handleResize);
+  fullscreenBtn.addEventListener('touchstart', handleFullscreenTouch, { passive: false });
+  fullscreenBtn.addEventListener('click', handleFullscreenClick);
 
   // Mobile control buttons
   const controls = {
@@ -325,135 +302,78 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// Handle window resize
-function handleResize() {
-  const gameRect = game.getBoundingClientRect();
-  const basketRect = basket.getBoundingClientRect();
-  
-  // Update basket position based on new window size
-  basketX = Math.min(basketX, gameRect.width - basketRect.width);
-  basketY = Math.min(basketY, gameRect.height - basketRect.height - 20);
-  
-  updateBasketPosition();
-}
+// Move basket with arrow keys (for computers)
+document.addEventListener('keydown', (e) => {
+  if (isGameOver) return;
 
-// Touch event handlers
-function handleTouchStart(e) {
-  if (e.touches.length !== 1) return;
+  if (e.key === 'ArrowLeft' && basketX > 10) {
+    basketX -= 5;
+  } else if (e.key === 'ArrowRight' && basketX < 90) {
+    basketX += 5;
+  } else if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+    togglePause();
+  }
+  basket.style.left = `${basketX}%`;
+});
+
+// Remove old touch event listener and add new swipe controls
+game.removeEventListener('touchmove', moveBasket);
+
+// Touch controls for mobile
+game.addEventListener('touchstart', (e) => {
+  if (isGameOver || !gameStarted || isPaused) return;
   
-  e.preventDefault();
-  isTouch = true;
-  
-  const touch = e.touches[0];
-  touchStartX = lastTouchX = touch.clientX;
-  touchStartY = lastTouchY = touch.clientY;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
   touchStartBasketX = basketX;
   touchStartBasketY = basketY;
-}
+}, { passive: true });
 
-function handleTouchMove(e) {
-  if (!isTouch || e.touches.length !== 1) return;
-  
+game.addEventListener('touchmove', (e) => {
+  if (isGameOver || !gameStarted || isPaused) return;
   e.preventDefault();
-  if (!gameStarted || isPaused || isGameOver) return;
-
-  const touch = e.touches[0];
-  const deltaX = touch.clientX - lastTouchX;
-  const deltaY = touch.clientY - lastTouchY;
   
-  lastTouchX = touch.clientX;
-  lastTouchY = touch.clientY;
-
-  // Update basket position with momentum
-  let newBasketX = basketX + deltaX * SWIPE_SENSITIVITY;
-  let newBasketY = basketY + deltaY * SWIPE_SENSITIVITY;
-
-  // Get game boundaries
+  const touchX = e.touches[0].clientX;
+  const touchY = e.touches[0].clientY;
+  const deltaX = touchX - touchStartX;
+  const deltaY = touchY - touchStartY;
+  
+  // Horizontal movement
+  const percentageMoveX = (deltaX / window.innerWidth) * 100 * SWIPE_SENSITIVITY;
+  basketX = Math.max(0, Math.min(100, touchStartBasketX + percentageMoveX));
+  
+  // Vertical movement
   const gameRect = game.getBoundingClientRect();
-  const basketRect = basket.getBoundingClientRect();
+  const percentageMoveY = (deltaY / gameRect.height) * 100 * SWIPE_SENSITIVITY;
+  basketY = Math.max(
+    BASKET_VERTICAL_LIMIT,
+    Math.min(window.innerHeight - 100, touchStartBasketY + deltaY)
+  );
   
-  // Constrain basket movement
-  newBasketX = Math.max(0, Math.min(gameRect.width - basketRect.width, newBasketX));
-  newBasketY = Math.max(BASKET_VERTICAL_LIMIT, Math.min(gameRect.height - basketRect.height - 20, newBasketY));
-
-  // Update basket position
-  basketX = newBasketX;
-  basketY = newBasketY;
   updateBasketPosition();
-}
+}, { passive: false });
 
-function handleTouchEnd(e) {
-  e.preventDefault();
-  isTouch = false;
-  touchStartX = null;
-  touchStartY = null;
-  lastTouchX = null;
-  lastTouchY = null;
-}
+game.addEventListener('touchend', () => {
+  touchStartX = 0;
+  touchStartY = 0;
+}, { passive: true });
 
-// Update basket position
-function updateBasketPosition() {
-  requestAnimationFrame(() => {
-    basket.style.transform = `translate3d(${basketX}px, ${basketY}px, 0)`;
-    basket.style.position = 'absolute';
-    basket.style.left = '0';
-    basket.style.top = '0';
-  });
-}
-
-// Toggle fullscreen
-function toggleFullscreen() {
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    if (game.requestFullscreen) {
-      game.requestFullscreen();
-    } else if (game.webkitRequestFullscreen) {
-      game.webkitRequestFullscreen();
-    }
-    game.classList.add('fullscreen');
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    }
-    game.classList.remove('fullscreen');
-  }
-}
-
-// Handle fullscreen change
-document.addEventListener('fullscreenchange', handleFullscreenChange);
-document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-
-function handleFullscreenChange() {
-  const fullscreenBtn = document.getElementById('fullscreenBtn');
-  if (document.fullscreenElement || document.webkitFullscreenElement) {
-    game.classList.add('fullscreen');
-    fullscreenBtn.textContent = '📱';
-  } else {
-    game.classList.remove('fullscreen');
-    fullscreenBtn.textContent = '📱';
-  }
-}
-
-// Keyboard controls
+// Update keyboard controls
 document.addEventListener('keydown', (e) => {
   if (isGameOver || !gameStarted || isPaused) return;
 
-  const gameRect = game.getBoundingClientRect();
-  const basketRect = basket.getBoundingClientRect();
-  
   switch (e.key) {
     case 'ArrowLeft':
       basketX = Math.max(0, basketX - BASKET_SPEED);
       break;
     case 'ArrowRight':
-      basketX = Math.min(gameRect.width - basketRect.width, basketX + BASKET_SPEED);
+      basketX = Math.min(100, basketX + BASKET_SPEED);
       break;
     case 'ArrowUp':
       basketY = Math.max(BASKET_VERTICAL_LIMIT, basketY - BASKET_SPEED);
       break;
     case 'ArrowDown':
-      basketY = Math.min(gameRect.height - basketRect.height - 20, basketY + BASKET_SPEED);
+      basketY = Math.min(window.innerHeight - 100, basketY + BASKET_SPEED);
       break;
     case 'p':
     case 'P':
@@ -464,28 +384,28 @@ document.addEventListener('keydown', (e) => {
   updateBasketPosition();
 });
 
-// Create falling fruits with proper mobile positioning
+// Helper function to update basket position
+function updateBasketPosition() {
+  const gameRect = game.getBoundingClientRect();
+  
+  // Update horizontal position
+  basket.style.left = `${basketX}%`;
+  
+  // Update vertical position
+  const maxY = gameRect.height - 100; // Leave some space from bottom
+  const minY = BASKET_VERTICAL_LIMIT; // Minimum distance from top
+  const clampedY = Math.max(minY, Math.min(maxY, basketY));
+  
+  basket.style.bottom = `${gameRect.height - clampedY}px`;
+}
+
+// Create falling fruits
 function createFruit() {
   if (isGameOver || isPaused) return;
 
   const fruit = document.createElement('div');
   fruit.classList.add('fruit');
 
-  const gameRect = game.getBoundingClientRect();
-  const fruitSize = Math.min(40, gameRect.width * 0.1); // Responsive fruit size
-  
-  // Set fruit size
-  fruit.style.width = `${fruitSize}px`;
-  fruit.style.height = `${fruitSize}px`;
-  fruit.style.fontSize = `${fruitSize}px`;
-
-  // Random position within game bounds
-  const maxX = gameRect.width - fruitSize;
-  const randomX = Math.random() * maxX;
-  
-  fruit.style.left = `${randomX}px`;
-  fruit.style.top = '-50px';
-  
   // Premium fruits and power-ups
   const isSpecial = Math.random() < (isPremium ? 0.3 : 0.2);
   if (isSpecial) {
@@ -513,6 +433,8 @@ function createFruit() {
     fruit.textContent = availableFruits[Math.floor(Math.random() * availableFruits.length)];
   }
 
+  fruit.style.left = `${Math.random() * 80 + 10}%`;
+  fruit.style.top = '-10%';
   game.appendChild(fruit);
 
   const fruitMoveInterval = setInterval(() => {
@@ -734,6 +656,51 @@ function togglePause() {
   }
 }
 
+// Handle pause button touch
+function handlePauseTouch(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  togglePause();
+}
+
+// Handle pause button click
+function handlePauseClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  togglePause();
+}
+
+// Handle fullscreen button touch
+function handleFullscreenTouch(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleFullscreen();
+}
+
+// Handle fullscreen button click
+function handleFullscreenClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleFullscreen();
+}
+
+// Add event listeners for fullscreen changes
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+function handleFullscreenChange() {
+  const gameContainer = document.getElementById('game');
+  if (!document.fullscreenElement && 
+      !document.webkitFullscreenElement && 
+      !document.msFullscreenElement) {
+    gameContainer.classList.remove('fullscreen');
+  } else {
+    gameContainer.classList.add('fullscreen');
+  }
+}
+
 // Premium feature handling
 function showPremiumModal(feature) {
   const modal = document.getElementById('premiumModal');
@@ -930,6 +897,50 @@ function shareScore() {
     document.execCommand('copy');
     document.body.removeChild(dummy);
     alert('Score copied to clipboard! Share it with your friends! 🎮');
+  }
+}
+
+// Update fullscreen handling
+function toggleFullscreen() {
+  const gameContainer = document.getElementById('game');
+  
+  if (!document.fullscreenElement && 
+      !document.webkitFullscreenElement && 
+      !document.msFullscreenElement) {
+    
+    // Try all possible methods
+    if (gameContainer.requestFullscreen) {
+      gameContainer.requestFullscreen();
+    } else if (gameContainer.webkitRequestFullscreen) { // Safari
+      gameContainer.webkitRequestFullscreen();
+    } else if (gameContainer.msRequestFullscreen) { // IE11
+      gameContainer.msRequestFullscreen();
+    } else if (gameContainer.mozRequestFullScreen) { // Firefox
+      gameContainer.mozRequestFullScreen();
+    }
+    
+    // Add fullscreen class
+    gameContainer.classList.add('fullscreen');
+    // Change orientation to landscape if possible
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {
+        // Silently fail if orientation lock is not supported
+      });
+    }
+  } else {
+    // Exit fullscreen
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
+    }
+    
+    // Remove fullscreen class
+    gameContainer.classList.remove('fullscreen');
   }
 }
 
