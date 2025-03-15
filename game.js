@@ -16,7 +16,7 @@ const heartSound = document.getElementById('heartSound');
 const bgMusic = document.getElementById('bgMusic');
 const pauseBtn = document.getElementById('pauseBtn');
 
-let basketX = 50;
+let basketX = window.innerWidth / 2;
 let score = 0;
 let lives = 4;
 let stage = 1;
@@ -28,9 +28,10 @@ let spawnRate = 1000;
 let isSlowActive = false;
 let slowDuration = 5000;
 let isPaused = false;
-let basketY = window.innerHeight - 160; // Initial basket Y position
+let basketY = window.innerHeight - 120; // Initial basket Y position
 const BASKET_SPEED = 20;
 const BASKET_VERTICAL_LIMIT = 100; // Minimum distance from top/bottom
+const SWIPE_SENSITIVITY = 1.0; // Reduced sensitivity for better mobile control
 
 // Premium features state
 let isPremium = false;
@@ -58,12 +59,14 @@ const ICONS = {
   PLAY: '▶️'
 };
 
-// Add these variables at the top with other declarations
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartBasketX = 0;
-let touchStartBasketY = 0;
-const SWIPE_SENSITIVITY = 1.5; // Adjust this value to change swipe sensitivity
+// Touch handling variables
+let touchStartX = null;
+let touchStartY = null;
+let touchStartBasketX = null;
+let touchStartBasketY = null;
+let lastTouchX = null;
+let lastTouchY = null;
+let isTouch = false;
 
 // Initialize variables
 let gameStarted = false;
@@ -243,11 +246,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initializePWA();
   await loadGameData();
 
+  // Set initial basket position
+  updateBasketPosition();
+
   // Initialize pause button
   const pauseBtn = document.getElementById('pauseBtn');
   pauseBtn.textContent = ICONS.PAUSE;
 
-  // Add touch event listeners for the game
+  // Add touch event listeners for the game container
   game.addEventListener('touchstart', handleTouchStart, { passive: false });
   game.addEventListener('touchmove', handleTouchMove, { passive: false });
   game.addEventListener('touchend', handleTouchEnd, { passive: false });
@@ -266,6 +272,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     togglePause();
   });
+
+  // Handle window resize
+  window.addEventListener('resize', handleResize);
+  
+  // Handle device orientation change
+  window.addEventListener('orientationchange', handleResize);
 
   // Mobile control buttons
   const controls = {
@@ -313,55 +325,56 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// Move basket with arrow keys (for computers)
-document.addEventListener('keydown', (e) => {
-  if (isGameOver) return;
-
-  if (e.key === 'ArrowLeft' && basketX > 10) {
-    basketX -= 5;
-  } else if (e.key === 'ArrowRight' && basketX < 90) {
-    basketX += 5;
-  } else if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
-    togglePause();
-  }
-  basket.style.left = `${basketX}%`;
-});
+// Handle window resize
+function handleResize() {
+  const gameRect = game.getBoundingClientRect();
+  const basketRect = basket.getBoundingClientRect();
+  
+  // Update basket position based on new window size
+  basketX = Math.min(basketX, gameRect.width - basketRect.width);
+  basketY = Math.min(basketY, gameRect.height - basketRect.height - 20);
+  
+  updateBasketPosition();
+}
 
 // Touch event handlers
 function handleTouchStart(e) {
+  if (e.touches.length !== 1) return;
+  
   e.preventDefault();
+  isTouch = true;
+  
   const touch = e.touches[0];
-  touchStartX = touch.clientX;
-  touchStartY = touch.clientY;
+  touchStartX = lastTouchX = touch.clientX;
+  touchStartY = lastTouchY = touch.clientY;
   touchStartBasketX = basketX;
   touchStartBasketY = basketY;
 }
 
 function handleTouchMove(e) {
+  if (!isTouch || e.touches.length !== 1) return;
+  
   e.preventDefault();
   if (!gameStarted || isPaused || isGameOver) return;
 
   const touch = e.touches[0];
-  const deltaX = touch.clientX - touchStartX;
-  const deltaY = touch.clientY - touchStartY;
+  const deltaX = touch.clientX - lastTouchX;
+  const deltaY = touch.clientY - lastTouchY;
+  
+  lastTouchX = touch.clientX;
+  lastTouchY = touch.clientY;
 
-  // Update basket position based on touch movement
-  let newBasketX = touchStartBasketX + deltaX * SWIPE_SENSITIVITY;
-  let newBasketY = touchStartBasketY - deltaY * SWIPE_SENSITIVITY;
+  // Update basket position with momentum
+  let newBasketX = basketX + deltaX * SWIPE_SENSITIVITY;
+  let newBasketY = basketY + deltaY * SWIPE_SENSITIVITY;
 
-  // Constrain basket movement within game boundaries
+  // Get game boundaries
   const gameRect = game.getBoundingClientRect();
   const basketRect = basket.getBoundingClientRect();
   
-  // Horizontal constraints
-  const minX = 0;
-  const maxX = gameRect.width - basketRect.width;
-  newBasketX = Math.max(minX, Math.min(maxX, newBasketX));
-
-  // Vertical constraints
-  const minY = BASKET_VERTICAL_LIMIT;
-  const maxY = gameRect.height - basketRect.height - 20;
-  newBasketY = Math.max(minY, Math.min(maxY, newBasketY));
+  // Constrain basket movement
+  newBasketX = Math.max(0, Math.min(gameRect.width - basketRect.width, newBasketX));
+  newBasketY = Math.max(BASKET_VERTICAL_LIMIT, Math.min(gameRect.height - basketRect.height - 20, newBasketY));
 
   // Update basket position
   basketX = newBasketX;
@@ -371,12 +384,21 @@ function handleTouchMove(e) {
 
 function handleTouchEnd(e) {
   e.preventDefault();
+  isTouch = false;
+  touchStartX = null;
+  touchStartY = null;
+  lastTouchX = null;
+  lastTouchY = null;
 }
 
 // Update basket position
 function updateBasketPosition() {
-  basket.style.left = `${basketX}px`;
-  basket.style.bottom = `${window.innerHeight - basketY - basket.offsetHeight}px`;
+  requestAnimationFrame(() => {
+    basket.style.transform = `translate3d(${basketX}px, ${basketY}px, 0)`;
+    basket.style.position = 'absolute';
+    basket.style.left = '0';
+    basket.style.top = '0';
+  });
 }
 
 // Toggle fullscreen
@@ -442,13 +464,28 @@ document.addEventListener('keydown', (e) => {
   updateBasketPosition();
 });
 
-// Create falling fruits
+// Create falling fruits with proper mobile positioning
 function createFruit() {
   if (isGameOver || isPaused) return;
 
   const fruit = document.createElement('div');
   fruit.classList.add('fruit');
 
+  const gameRect = game.getBoundingClientRect();
+  const fruitSize = Math.min(40, gameRect.width * 0.1); // Responsive fruit size
+  
+  // Set fruit size
+  fruit.style.width = `${fruitSize}px`;
+  fruit.style.height = `${fruitSize}px`;
+  fruit.style.fontSize = `${fruitSize}px`;
+
+  // Random position within game bounds
+  const maxX = gameRect.width - fruitSize;
+  const randomX = Math.random() * maxX;
+  
+  fruit.style.left = `${randomX}px`;
+  fruit.style.top = '-50px';
+  
   // Premium fruits and power-ups
   const isSpecial = Math.random() < (isPremium ? 0.3 : 0.2);
   if (isSpecial) {
@@ -476,8 +513,6 @@ function createFruit() {
     fruit.textContent = availableFruits[Math.floor(Math.random() * availableFruits.length)];
   }
 
-  fruit.style.left = `${Math.random() * 80 + 10}%`;
-  fruit.style.top = '-10%';
   game.appendChild(fruit);
 
   const fruitMoveInterval = setInterval(() => {

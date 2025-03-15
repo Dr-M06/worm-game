@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#FFD700">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#4CAF50">
   <meta name="description" content="Catch fruits and avoid worms in this exciting arcade game!">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -98,8 +98,6 @@
 
   <!-- Game Container -->
   <div id="game">
-    <button class="fullscreen-btn" id="fullscreenBtn">📱</button>
-    <button class="menu-btn" id="menuBtn">☰</button>
     <div id="gameContent">
       <div id="header">
         <div id="score">Score: 0</div>
@@ -119,18 +117,27 @@
         <button class="share-btn" onclick="shareScore()">Share Score</button>
       </div>
     </div>
+    <button class="fullscreen-btn" id="fullscreenBtn">📱</button>
+    <button class="menu-btn" id="menuBtn">☰</button>
+  </div>
+
+  <!-- Menu Panel -->
+  <div class="menu-panel" id="menuPanel">
+    <button id="addToHomeBtn" class="menu-item">📱 Add to Home Screen</button>
+    <button id="toggleSoundBtn" class="menu-item">🔊 Sound</button>
+    <button id="toggleThemeBtn" class="menu-item">🎨 Theme</button>
+    <button id="helpBtn" class="menu-item">❓ Help</button>
   </div>
 
   <!-- Sound Effects -->
-  <audio id="catchSound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3"></audio>
-  <audio id="missSound" src="https://www.soundjay.com/misc/sounds/fail-trombone-01.mp3"></audio>
-  <audio id="boostSound" src="https://www.soundjay.com/misc/sounds/magic-chime-02.mp3"></audio>
-  <audio id="wormSound" src="https://www.soundjay.com/misc/sounds/wrong-buzzer-01.mp3"></audio>
-  <audio id="slowSound" src="https://www.soundjay.com/misc/sounds/fairy-dust-01.mp3"></audio>
-  <audio id="heartSound" src="https://www.soundjay.com/misc/sounds/magic-chime-02.mp3"></audio>
-  <audio id="bgMusic" loop>
+  <audio id="catchSound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" preload="auto"></audio>
+  <audio id="missSound" src="https://www.soundjay.com/misc/sounds/fail-trombone-01.mp3" preload="auto"></audio>
+  <audio id="boostSound" src="https://www.soundjay.com/misc/sounds/magic-chime-02.mp3" preload="auto"></audio>
+  <audio id="wormSound" src="https://www.soundjay.com/misc/sounds/wrong-buzzer-01.mp3" preload="auto"></audio>
+  <audio id="slowSound" src="https://www.soundjay.com/misc/sounds/fairy-dust-01.mp3" preload="auto"></audio>
+  <audio id="heartSound" src="https://www.soundjay.com/misc/sounds/magic-chime-02.mp3" preload="auto"></audio>
+  <audio id="bgMusic" loop preload="auto">
     <source src="https://www.bensound.com/bensound-music/bensound-relaxing.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
   </audio>
 
   <!-- Offline Assets -->
@@ -145,13 +152,6 @@
     <img src="icons/icon-192x192.png" alt="">
     <img src="icons/icon-384x384.png" alt="">
     <img src="icons/icon-512x512.png" alt="">
-  </div>
-
-  <div class="menu-panel" id="menuPanel">
-    <button id="addToHomeBtn" class="menu-item">📱 Add to Home Screen</button>
-    <button id="toggleSoundBtn" class="menu-item">🔊 Sound</button>
-    <button id="toggleThemeBtn" class="menu-item">🎨 Theme</button>
-    <button id="helpBtn" class="menu-item">❓ Help</button>
   </div>
 
   <script>
